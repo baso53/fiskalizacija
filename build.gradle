@@ -1,0 +1,120 @@
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version '3.5.0'
+	id 'io.spring.dependency-management' version '1.1.7'
+    id 'io.freefair.lombok' version '8.13.1'
+}
+
+group = 'hr.leadtheway'
+version = '0.0.1-SNAPSHOT'
+
+ext.jaxwsSourceDir = "${buildDir}/generated/sources/jaxws"
+
+configurations {
+    jaxws
+}
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(21)
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+tasks.register('wsimport') {
+    description = 'Generate classes from wsdl using wsimport'
+
+    doLast {
+        project.mkdir(jaxwsSourceDir)
+        ant {
+            taskdef(name: 'wsimport',
+                    classname: 'com.sun.tools.ws.ant.WsImport',
+                    classpath: configurations.jaxws.asPath
+            )
+            wsimport(
+                    keep: true,
+                    destdir: jaxwsSourceDir,
+                    extension: "true",
+                    verbose: true,
+                    wsdl: "${projectDir}/src/main/resources/Fiskalizacija-WSDL-PROD_v1.7/wsdl/FiskalizacijaService.wsdl",
+                    xnocompile: true,
+                    package: "hr.leadtheway.wsdl") {
+                xjcarg(value: "-XautoNameResolution")
+            }
+        }
+    }
+}
+
+sourceSets {
+    main {
+        java.srcDirs += jaxwsSourceDir
+    }
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation "org.apache.santuario:xmlsec:4.0.4"
+    implementation("com.sun.xml.ws:jaxws-ri:4.0.3")
+
+    jaxws 'com.sun.xml.ws:jaxws-tools:4.0.2'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.register("annotateSoapModels") {
+    dependsOn("wsimport")
+    doLast {
+        // 1) patch all generated model classes with Lombok annotations
+        fileTree(jaxwsSourceDir)
+                .matching { include("**/*.java") }
+                .forEach { File f ->
+                    def text = f.text
+                    if (!text.contains("Builder(") && text.contains("@XmlType")) {
+                        // add lombok imports
+                        text = text.replaceFirst(
+                                /(package [\w\.]+;)/,
+                                '$1\n\nimport lombok.Builder;\nimport lombok.AllArgsConstructor;\nimport lombok.NoArgsConstructor;'
+                        )
+                        // add @Builder/@AllArgsConstructor/@NoArgsConstructor to the class
+                        text = text.replaceFirst(
+                                /public class (\w+)/,
+                                '@Builder(toBuilder = true)\n@AllArgsConstructor\n@NoArgsConstructor\npublic class $1'
+                        )
+                        f.text = text
+                        // add @Builder/@AllArgsConstructor/@NoArgsConstructor to all the inner static classes
+                        text = text.replaceAll(
+                                /([ \t]*)public static class (\w+)/,
+                                '$1@Builder(toBuilder = true)\n$1@AllArgsConstructor\n$1@NoArgsConstructor\n$1public static class $2'
+                        )
+                        f.text = text
+                    }
+                }
+
+        // 2) emit a package‐info.java in the hr.leadtheway.wsdl package
+        def wsdlPkgDir = file("$jaxwsSourceDir/hr/leadtheway/wsdl")
+        def pkgInfo    = new File(wsdlPkgDir, "package-info.java")
+
+            pkgInfo.text = """
+    @jakarta.xml.bind.annotation.XmlSchema(
+      namespace           = "http://www.apis-it.hr/fin/2012/types/f73",
+      elementFormDefault  = jakarta.xml.bind.annotation.XmlNsForm.QUALIFIED,
+      xmlns = {
+        @jakarta.xml.bind.annotation.XmlNs(prefix="xd",      namespaceURI="http://www.w3.org/2000/09/xmldsig#"),
+        @jakarta.xml.bind.annotation.XmlNs(prefix="tns",     namespaceURI="http://www.apis-it.hr/fin/2012/types/f73")
+      }
+    )
+    package hr.leadtheway.wsdl;""".stripIndent()
+    }
+}
+
+compileJava {
+    dependsOn annotateSoapModels, wsimport
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+}

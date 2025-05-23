@@ -1,0 +1,9 @@
+spring.application.name: fiskalizacija
+
+logging.level.root: TRACE
+
+fina.keystore.path: 'classpath:'
+fina.keystore.storepass:
+fina.keystore.alias: 'fiskal 1'
+fina.keystore.keypass:
+fina.endpoint.url: https://cistest.apis-it.hr:8449/FiskalizacijaServiceTest
