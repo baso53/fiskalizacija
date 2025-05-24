@@ -5,12 +5,14 @@ import org.springframework.core.io.Resource;
 import java.security.KeyStore.PrivateKeyEntry;
 import java.security.PrivateKey;
 import java.security.cert.Certificate;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 
 import static java.security.KeyStore.getInstance;
 
-public final class KeyStoreUtil {
+public final class KeyUtils {
 
-    private KeyStoreUtil() {
+    private KeyUtils() {
     }
 
     public static PrivateKeyEntry loadPKCS12(
@@ -28,5 +30,12 @@ public final class KeyStoreUtil {
         var cert = ks.getCertificate(alias);
 
         return new PrivateKeyEntry((PrivateKey) key, new Certificate[]{cert});
+    }
+
+    public static X509Certificate loadX509(Resource resource) throws Exception {
+        var cf = CertificateFactory.getInstance("X.509");
+        try (var in = resource.getInputStream()) {
+            return (X509Certificate) cf.generateCertificate(in);
+        }
     }
 }

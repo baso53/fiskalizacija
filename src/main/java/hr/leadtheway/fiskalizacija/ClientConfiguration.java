@@ -11,7 +11,8 @@ import org.springframework.core.io.Resource;
 import java.security.KeyStore.PrivateKeyEntry;
 import java.util.Collections;
 
-import static hr.leadtheway.fiskalizacija.KeyStoreUtil.loadPKCS12;
+import static hr.leadtheway.fiskalizacija.KeyUtils.loadPKCS12;
+import static hr.leadtheway.fiskalizacija.KeyUtils.loadX509;
 
 @Configuration
 public class ClientConfiguration {
@@ -20,17 +21,20 @@ public class ClientConfiguration {
     private final String storePass;
     private final String alias;
     private final String keyPass;
+    private final Resource responsePublicKey;
 
     public ClientConfiguration(
-            @Value("${fina.keystore.path}") Resource p12Path,
+            @Value("${fina.keystore.path}") Resource p12PrivateKeyFile,
             @Value("${fina.keystore.storepass}") String storePass,
             @Value("${fina.keystore.alias}") String alias,
-            @Value("${fina.keystore.keypass}") String keyPass
+            @Value("${fina.keystore.keypass}") String keyPass,
+            @Value("${fina.response.public-key}") Resource responsePublicKeyFile
     ) {
-        this.p12Path = p12Path;
+        this.p12Path = p12PrivateKeyFile;
         this.storePass = storePass;
         this.alias = alias;
         this.keyPass = keyPass;
+        this.responsePublicKey = responsePublicKeyFile;
     }
 
     @Bean
