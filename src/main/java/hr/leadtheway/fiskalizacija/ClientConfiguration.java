@@ -20,20 +20,17 @@ public class ClientConfiguration {
     private final String storePass;
     private final String alias;
     private final String keyPass;
-    private final String endpointUrl;
 
     public ClientConfiguration(
             @Value("${fina.keystore.path}") Resource p12Path,
             @Value("${fina.keystore.storepass}") String storePass,
             @Value("${fina.keystore.alias}") String alias,
-            @Value("${fina.keystore.keypass}") String keyPass,
-            @Value("${fina.endpoint.url}") String endpointUrl
+            @Value("${fina.keystore.keypass}") String keyPass
     ) {
         this.p12Path = p12Path;
         this.storePass = storePass;
         this.alias = alias;
         this.keyPass = keyPass;
-        this.endpointUrl = endpointUrl;
     }
 
     @Bean
@@ -58,7 +55,6 @@ public class ClientConfiguration {
 
         if (port instanceof BindingProvider bindingProvider) {
             bindingProvider.getBinding().setHandlerChain(Collections.singletonList(signatureHandler));
-            bindingProvider.getRequestContext().put(BindingProvider.ENDPOINT_ADDRESS_PROPERTY, endpointUrl);
         } else {
             throw new IllegalArgumentException("Unsupported port");
         }

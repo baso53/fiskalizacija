@@ -39,7 +39,7 @@ tasks.register('wsimport') {
                     destdir: jaxwsSourceDir,
                     extension: "true",
                     verbose: true,
-                    wsdl: "${projectDir}/src/main/resources/Fiskalizacija-WSDL-PROD_v1.7/wsdl/FiskalizacijaService.wsdl",
+                    wsdl: "${projectDir}/src/main/resources/Fiskalizacija-WSDL-EDUC_v1.7/wsdl/FiskalizacijaService.wsdl",
                     xnocompile: true,
                     package: "hr.leadtheway.wsdl") {
                 xjcarg(value: "-XautoNameResolution")
