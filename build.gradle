@@ -86,18 +86,18 @@ tasks.register("annotateSoapModels") {
                         // add lombok imports
                         text = text.replaceFirst(
                                 /(package [\w\.]+;)/,
-                                '$1\n\nimport lombok.Builder;\nimport lombok.AllArgsConstructor;\nimport lombok.NoArgsConstructor;'
+                                '$1\n\nimport lombok.Builder;\nimport lombok.AllArgsConstructor;\nimport lombok.NoArgsConstructor;\nimport lombok.EqualsAndHashCode;'
                         )
                         // add @Builder/@AllArgsConstructor/@NoArgsConstructor to the class
                         text = text.replaceFirst(
                                 /public class (\w+)/,
-                                '@Builder(toBuilder = true)\n@AllArgsConstructor\n@NoArgsConstructor\npublic class $1'
+                                '@Builder(toBuilder = true)\n@AllArgsConstructor\n@NoArgsConstructor\n@EqualsAndHashCode\npublic class $1'
                         )
                         f.text = text
                         // add @Builder/@AllArgsConstructor/@NoArgsConstructor to all the inner static classes
                         text = text.replaceAll(
                                 /([ \t]*)public static class (\w+)/,
-                                '$1@Builder(toBuilder = true)\n$1@AllArgsConstructor\n$1@NoArgsConstructor\n$1public static class $2'
+                                '$1@Builder(toBuilder = true)\n$1@AllArgsConstructor\n$1@NoArgsConstructor\n$1@EqualsAndHashCode\n$1public static class $2'
                         )
                         f.text = text
                     }
