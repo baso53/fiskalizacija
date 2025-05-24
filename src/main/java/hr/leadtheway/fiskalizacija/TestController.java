@@ -6,25 +6,41 @@ import hr.leadtheway.wsdl.NacinPlacanjaType;
 import hr.leadtheway.wsdl.OznakaSlijednostiType;
 import hr.leadtheway.wsdl.PdvType;
 import hr.leadtheway.wsdl.PorezType;
-import hr.leadtheway.wsdl.RacunPDType;
-import hr.leadtheway.wsdl.RacunPDZahtjev;
+import hr.leadtheway.wsdl.ProvjeraZahtjev;
+import hr.leadtheway.wsdl.RacunType;
 import hr.leadtheway.wsdl.ZaglavljeType;
-import jakarta.xml.bind.JAXBElement;
+import jakarta.validation.Validator;
 import lombok.RequiredArgsConstructor;
-import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
 
-import javax.xml.namespace.QName;
 import java.util.List;
 
-@Service
+@Controller
 @RequiredArgsConstructor
-public class TestService {
+public class TestController {
 
     private final FiskalizacijaPortType fiskalizacijaPortType;
+    private final Validator validator;
 
-    @Scheduled(initialDelay = 50000, fixedDelay = 50000)
-    public void scheduled() {
+    public void validate(Object object) {
+        var violations = validator.validate(object);
+
+        if (!violations.isEmpty()) {
+            var a = 1;
+        }
+    }
+
+    @GetMapping("/echo")
+    public String echo() {
+        var response = fiskalizacijaPortType.echo("echo-test");
+
+        return response;
+    }
+
+    @GetMapping("/racun")
+    public String racun() {
+
         var zahtjevId = "racunPDId";
         var idPoruke = "3541f671-da0a-44ae-bf3b-800d63e454b9";
         var zagDatumVrijeme = "24.06.2025T09:59:43";  // wtf is this format
@@ -34,7 +50,7 @@ public class TestService {
                 .datumVrijeme(zagDatumVrijeme)
                 .build();
 
-        var oib = "98765432198";
+        var oib = "00797008853";
         boolean uSustPdv = true;
         var datVrijeme = "24.06.2025T09:59:43";  // wtf is this format
         var oznSlijed = OznakaSlijednostiType.P;
@@ -61,7 +77,7 @@ public class TestService {
         var zastKod = "c61f548d7fcbc17e7d1bee52740b5518";
         boolean nakDost = false;
 
-        var racunPd = RacunPDType.builder()
+        var racunPd = RacunType.builder()
                 .oib(oib)
                 .uSustPdv(uSustPdv)
                 .datVrijeme(datVrijeme)
@@ -73,32 +89,18 @@ public class TestService {
                 .oibOper(oibOper)
                 .zastKod(zastKod)
                 .nakDost(nakDost)
-                .prateciDokument(RacunPDType.PrateciDokument.builder()
-                        .jirPDOrZastKodPD(List.of(
-                                new JAXBElement<>(
-                                        new QName("http://www.apis-it.hr/fin/2012/types/f73", "ZastKodPD"),
-                                        String.class,
-                                        "9d0dbe601dff64ebf2000ce1f943dc8f"
-                                )
-                        ))
-                        .build())
                 .build();
 
-        var zahtjev = RacunPDZahtjev.builder()
+        var zahtjev = ProvjeraZahtjev.builder()
                 .id(zahtjevId)
                 .zaglavlje(zaglavlje)
                 .racun(racunPd)
                 .build();
 
-        var response = fiskalizacijaPortType.racuniPD(zahtjev);
+        validate(zahtjev);
 
-        var a = 1;
-    }
+        var response = fiskalizacijaPortType.provjera(zahtjev);
 
-    @Scheduled(initialDelay = 50000, fixedDelay = 50000)
-    public void testEcho() {
-        var response = fiskalizacijaPortType.echo("a");
-
-        var a = 1;
+        return "";
     }
 }
