@@ -87,7 +87,7 @@ tasks.register("annotateSoapModels") {
                         // add lombok imports
                         text = text.replaceFirst(
                                 /(package [\w\.]+;)/,
-                                '$1\n\nimport lombok.Builder;\nimport lombok.AllArgsConstructor;\nimport lombok.NoArgsConstructor;\nimport lombok.EqualsAndHashCode;\nimport hr.leadtheway.fiskalizacija.CustomPattern;'
+                                '$1\n\nimport lombok.Builder;\nimport lombok.AllArgsConstructor;\nimport lombok.NoArgsConstructor;\nimport lombok.EqualsAndHashCode;'
                         )
                         // add @Builder/@AllArgsConstructor/@NoArgsConstructor to the class
                         text = text.replaceFirst(
@@ -99,11 +99,6 @@ tasks.register("annotateSoapModels") {
                         text = text.replaceAll(
                                 /([ \t]*)public static class (\w+)/,
                                 '$1@Builder(toBuilder = true)\n$1@AllArgsConstructor\n$1@NoArgsConstructor\n$1@EqualsAndHashCode\n$1public static class $2'
-                        )
-                        f.text = text
-                        text = text.replaceAll(
-                                /@Pattern/,
-                                '@CustomPattern'
                         )
                         f.text = text
                     }
