@@ -52,7 +52,7 @@ public class ClientConfiguration {
         var inboundSignatureHandler = new XmlSignatureInboundHandler(loadX509(responsePublicKeyFile));
 
         if (port instanceof BindingProvider bindingProvider) {
-            bindingProvider.getBinding().setHandlerChain(List.of(outboundSignatureHandler, inboundSignatureHandler));
+            bindingProvider.getBinding().setHandlerChain(List.of(outboundSignatureHandler));
         } else {
             throw new IllegalArgumentException("Unsupported port");
         }
