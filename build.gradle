@@ -86,6 +86,12 @@ tasks.register("annotateSoapModels") {
                 .matching { include("**/*.java") }
                 .forEach { File f ->
                     def text = f.text
+
+                    // remove unwanted @Pattern annotations on Java enums
+                    text = text
+                            .replace('@Pattern(regexp = "(\\\\QN\\\\E)|(\\\\QP\\\\E)")', '')
+                            .replace('@Pattern(regexp = "(\\\\QG\\\\E)|(\\\\QK\\\\E)|(\\\\QC\\\\E)|(\\\\QT\\\\E)|(\\\\QO\\\\E)")', '')
+
                     if (!text.contains("Builder(") && text.contains("@XmlType")) {
                         // add lombok imports
                         text = text.replaceFirst(
