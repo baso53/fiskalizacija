@@ -9,24 +9,27 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.Resource;
 
 import java.security.KeyStore.PrivateKeyEntry;
+import java.security.PrivateKey;
+import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
+import java.util.Arrays;
 import java.util.List;
 
-import static hr.leadtheway.fiskalizacija.KeyUtils.loadPKCS12;
+import static java.security.KeyStore.getInstance;
 
 @Configuration
 public class ClientConfiguration {
 
     private final Resource p12PrivateKeyFile;
-    private final String p12StorePass;
+    private final char[] p12StorePass;
     private final String p12KeyAlias;
-    private final String p12KeyPass;
+    private final char[] p12KeyPass;
 
     public ClientConfiguration(
             @Value("${fina.keystore.path}") Resource p12PrivateKeyFile,
-            @Value("${fina.keystore.storepass}") String p12StorePass,
+            @Value("${fina.keystore.storepass}") char[] p12StorePass,
             @Value("${fina.keystore.alias}") String p12KeyAlias,
-            @Value("${fina.keystore.keypass}") String p12KeyPass
+            @Value("${fina.keystore.keypass}") char[] p12KeyPass
     ) {
         this.p12PrivateKeyFile = p12PrivateKeyFile;
         this.p12StorePass = p12StorePass;
@@ -35,13 +38,19 @@ public class ClientConfiguration {
     }
 
     @Bean
-    public PrivateKeyEntry privateKeyEntry() throws Exception {
-        return loadPKCS12(
-                p12PrivateKeyFile,
-                p12StorePass.toCharArray(),
-                p12KeyAlias,
-                p12KeyPass.toCharArray()
-        );
+    public PrivateKeyEntry p12PrivateKey() throws Exception {
+        var ks = getInstance("PKCS12");
+        try (var fis = p12PrivateKeyFile.getInputStream()) {
+            ks.load(fis, p12StorePass);
+        }
+
+        Arrays.fill(p12StorePass, '\0');
+
+        var key = ks.getKey(p12KeyAlias, p12KeyPass);
+        Arrays.fill(p12KeyPass, '\0');
+        var cert = ks.getCertificate(p12KeyAlias);
+
+        return new PrivateKeyEntry((PrivateKey) key, new Certificate[]{cert});
     }
 
     @Bean
