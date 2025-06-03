@@ -88,7 +88,17 @@ public class XmlSignatureOutboundHandler implements SOAPHandler<SOAPMessageConte
     }
 
     // ---- boiler-plate ↓ ----------------------------------------------------
-    @Override public boolean handleFault(SOAPMessageContext ctx){return true;}
-    @Override public void close(MessageContext ctx) {}
-    @Override public Set<QName> getHeaders(){return null;}
+    @Override
+    public boolean handleFault(SOAPMessageContext ctx) {
+        return true;
+    }
+
+    @Override
+    public void close(MessageContext ctx) {
+    }
+
+    @Override
+    public Set<QName> getHeaders() {
+        return null;
+    }
 }
