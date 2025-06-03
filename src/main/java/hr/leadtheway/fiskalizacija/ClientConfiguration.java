@@ -8,6 +8,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.Resource;
 
+import java.security.KeyStore.PrivateKeyEntry;
 import java.security.cert.X509Certificate;
 import java.util.List;
 
@@ -34,17 +35,20 @@ public class ClientConfiguration {
     }
 
     @Bean
-    public FiskalizacijaPortType fiskalizacijaPort() throws Exception {
-        var port = new FiskalizacijaService().getFiskalizacijaPortType();
-
-        var p12 = loadPKCS12(
+    public PrivateKeyEntry privateKeyEntry() throws Exception {
+        return loadPKCS12(
                 p12PrivateKeyFile,
                 p12StorePass.toCharArray(),
                 p12KeyAlias,
                 p12KeyPass.toCharArray()
         );
+    }
 
-        var outboundSignatureHandler = new XmlSignatureOutboundHandler(p12.getPrivateKey(), (X509Certificate) p12.getCertificate());
+    @Bean
+    public FiskalizacijaPortType fiskalizacijaPort(PrivateKeyEntry privateKeyEntry) {
+        var port = new FiskalizacijaService().getFiskalizacijaPortType();
+
+        var outboundSignatureHandler = new XmlSignatureOutboundHandler(privateKeyEntry.getPrivateKey(), (X509Certificate) privateKeyEntry.getCertificate());
 
         if (port instanceof BindingProvider bindingProvider) {
             bindingProvider.getBinding().setHandlerChain(List.of(outboundSignatureHandler));

@@ -1,6 +1,7 @@
 
 package hr.leadtheway.fiskalizacija;
 
+import hr.leadtheway.wsdl.BrojRacunaType;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -8,6 +9,8 @@ import org.apache.commons.codec.digest.DigestUtils;
 
 import java.security.PrivateKey;
 import java.security.Signature;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 
 /**
  * ZastitniKodIzracun - klasa za izračun zaštitnog broja napisana tako da prati
@@ -16,26 +19,26 @@ import java.security.Signature;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 @Slf4j
 public class ZastitniKodIzracunUtils {
+    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy' 'HH:mm:ss");
+
     public static String calculate(
             String oib,
-            String datumIVrijemeIzdavanjaRacuna,
-            String brojcanaOznakaRacuna,
-            String oznakaPoslovnogProstora,
-            String oznakaNaplatnogUredaja,
+            ZonedDateTime datumIVrijemeIzdavanjaRacuna,
+            BrojRacunaType brRac,
             String ukupniIznosRacuna,
             PrivateKey privateKey
     ) {
         var medjurezultat = oib;
         // medjurezultat = medjurezultat + datVrij
-        medjurezultat = medjurezultat + datumIVrijemeIzdavanjaRacuna;
+        medjurezultat = medjurezultat + DATE_TIME_FORMATTER.format(datumIVrijemeIzdavanjaRacuna);
         // medjurezultat = medjurezultat + bor
-        medjurezultat = medjurezultat + brojcanaOznakaRacuna;
+        medjurezultat = medjurezultat + brRac.getBrOznRac();
         // pročitaj (opp – oznaka poslovnog prostora)
         // medjurezultat = medjurezultat + opp
-        medjurezultat = medjurezultat + oznakaPoslovnogProstora;
+        medjurezultat = medjurezultat + brRac.getOznPosPr();
         // pročitaj (onu – oznaka naplatnog uređaja)
         // medjurezultat = medjurezultat + onu
-        medjurezultat = medjurezultat + oznakaNaplatnogUredaja;
+        medjurezultat = medjurezultat + brRac.getOznNapUr();
         // pročitaj ( uir - ukupni iznos računa )
         // medjurezultat = medjurezultat + uir
         medjurezultat = medjurezultat + ukupniIznosRacuna;
