@@ -35,21 +35,17 @@ tasks.register('wsimport') {
                     classpath: configurations.jaxws.asPath
             )
             wsimport(
-                    keep: true,
                     destdir: jaxwsSourceDir,
                     extension: "true",
                     verbose: true,
                     wsdl: "${projectDir}/src/main/resources/Fiskalizacija-WSDL-EDUC_v1.7/wsdl/FiskalizacijaService.wsdl",
                     xnocompile: true,
                     package: "hr.leadtheway.wsdl") {
-                xjcarg(value: "-XautoNameResolution")
-
-                /*  JSR-303 annotations plug-in */
+                // config for https://github.com/fillumina/krasa-jaxb-tools
                 xjcarg(value: '-XJsr303Annotations')
                 xjcarg(value: '-XJsr303Annotations:generateNotNullAnnotations=true')
                 xjcarg(value: '-XJsr303Annotations:generateListAnnotations=true')
                 xjcarg(value: '-XJsr303Annotations:validationAnnotations=jakarta')
-
             }
         }
     }

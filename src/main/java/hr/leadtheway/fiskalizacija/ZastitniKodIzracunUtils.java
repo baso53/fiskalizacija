@@ -9,7 +9,7 @@ import org.apache.commons.codec.digest.DigestUtils;
 
 import java.security.PrivateKey;
 import java.security.Signature;
-import java.time.ZonedDateTime;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 /**
@@ -23,26 +23,17 @@ public class ZastitniKodIzracunUtils {
 
     public static String calculate(
             String oib,
-            ZonedDateTime datumIVrijemeIzdavanjaRacuna,
+            LocalDateTime datumIVrijemeIzdavanjaRacuna,
             BrojRacunaType brRac,
             String ukupniIznosRacuna,
             PrivateKey privateKey
     ) {
         var medjurezultat = oib;
-        // medjurezultat = medjurezultat + datVrij
         medjurezultat = medjurezultat + DATE_TIME_FORMATTER.format(datumIVrijemeIzdavanjaRacuna);
-        // medjurezultat = medjurezultat + bor
         medjurezultat = medjurezultat + brRac.getBrOznRac();
-        // pročitaj (opp – oznaka poslovnog prostora)
-        // medjurezultat = medjurezultat + opp
         medjurezultat = medjurezultat + brRac.getOznPosPr();
-        // pročitaj (onu – oznaka naplatnog uređaja)
-        // medjurezultat = medjurezultat + onu
         medjurezultat = medjurezultat + brRac.getOznNapUr();
-        // pročitaj ( uir - ukupni iznos računa )
-        // medjurezultat = medjurezultat + uir
         medjurezultat = medjurezultat + ukupniIznosRacuna;
-        // elektronički potpiši medjurezultat koristeći RSA-SHA1 potpis
         byte[] potpisano = null;
         try {
             var biljeznik = Signature.getInstance("SHA1withRSA");
@@ -50,14 +41,9 @@ public class ZastitniKodIzracunUtils {
             biljeznik.update(medjurezultat.getBytes());
             potpisano = biljeznik.sign();
         } catch (Exception e) {
-            // nije uspjelo čitanje privatnog ključa
             e.printStackTrace();
         }
-        // rezultatIspis = izračunajMD5(elektronički potpisani medjurezultat)
-        var rezultatIspis = DigestUtils.md5Hex(potpisano);
-        // kraj
-        log.info("Dobiveni 32-znamenkasti zaštitni kod je: {}", rezultatIspis);
 
-        return rezultatIspis;
+        return DigestUtils.md5Hex(potpisano);
     }
 }

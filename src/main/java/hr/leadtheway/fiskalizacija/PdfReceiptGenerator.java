@@ -5,6 +5,7 @@ import com.google.zxing.WriterException;
 import com.google.zxing.qrcode.QRCodeWriter;
 import hr.leadtheway.wsdl.BrojRacunaType;
 import hr.leadtheway.wsdl.NacinPlacanjaType;
+import lombok.Builder;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
@@ -24,7 +25,7 @@ import java.util.Map;
 import static com.google.zxing.BarcodeFormat.QR_CODE;
 import static com.google.zxing.EncodeHintType.ERROR_CORRECTION;
 import static com.google.zxing.client.j2se.MatrixToImageWriter.toBufferedImage;
-import static com.google.zxing.qrcode.decoder.ErrorCorrectionLevel.L;
+import static com.google.zxing.qrcode.decoder.ErrorCorrectionLevel.Q;
 import static org.apache.pdfbox.pdmodel.PDPageContentStream.AppendMode.APPEND;
 import static org.apache.pdfbox.pdmodel.common.PDRectangle.A4;
 import static org.apache.pdfbox.pdmodel.font.Standard14Fonts.FontName.HELVETICA;
@@ -38,6 +39,7 @@ public final class PdfReceiptGenerator {
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd.MM.yyyy");
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm:ss");
+    private static final DateTimeFormatter QR_DATETIME_FMT = DateTimeFormatter.ofPattern("yyyyMMdd_HHmm");
 
     private static final float MARGIN = 50f;
     private static final float TITLE_GAP = 35f;
@@ -63,8 +65,7 @@ public final class PdfReceiptGenerator {
             String legalNotice,
             String jir,
             String zki,
-            String operatorCode,
-            String qrData
+            String operatorCode
     ) throws IOException, WriterException {
 
         try (var doc = new PDDocument()) {
@@ -87,10 +88,33 @@ public final class PdfReceiptGenerator {
                 y = addItemsTable(cs, font, fontBold, items, leftX, y, tableWidth);
                 y = addTotals(cs, fontBold, iznosUkupno, leftX + tableWidth, y);
                 addLegalNotice(cs, font, legalNotice, jir, zki, operatorCode, leftX, y);
+
+                var qrData = buildQrData(jir, zki, datumIVrijeme, iznosUkupno);
                 addQrCodeAndFooter(cs, doc, page, font, qrData);
             }
             doc.save(out);
         }
+    }
+
+    private static String buildQrData(String jir,
+                                      String zki,
+                                      LocalDateTime dt,
+                                      String totalAmount) {
+
+        var base = "https://porezna.gov.hr/rn?";
+        var idParam = (jir != null && !jir.isBlank())
+                ? "jir=" + jir
+                : "zki=" + zki;
+//        var idParam = "zki=" + zki;
+
+        var datePart = "datv=" + QR_DATETIME_FMT.format(dt);
+        var amountPart = "izn=" + formatAmountForQr(totalAmount);
+
+        return base + idParam + "&" + datePart + "&" + amountPart;
+    }
+
+    private static String formatAmountForQr(String amountTxt) {
+        return amountTxt.replace(".", "");
     }
 
     private static float addTitle(PDPageContentStream cs, PDPage page, PDFont font, float y) throws IOException {
@@ -286,13 +310,13 @@ public final class PdfReceiptGenerator {
         cs.endText();
     }
 
-    // QR generatoion
+    // QR generation
 
     private static BufferedImage generateQrImage(String data) throws WriterException {
         var writer = new QRCodeWriter();
         var hints = Map.of(
                 EncodeHintType.MARGIN, 1,
-                ERROR_CORRECTION, L
+                ERROR_CORRECTION, Q
         );
         var matrix = writer.encode(data, QR_CODE, QR_SIZE, QR_SIZE, hints);
         return toBufferedImage(matrix);
@@ -309,6 +333,7 @@ public final class PdfReceiptGenerator {
         return value + " EUR";
     }
 
+    @Builder(toBuilder = true)
     public record InvoiceItem(String description, Integer quantity, String netAmount) {
     }
 }
