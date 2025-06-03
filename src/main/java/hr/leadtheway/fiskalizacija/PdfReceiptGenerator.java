@@ -16,7 +16,6 @@ import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -37,10 +36,38 @@ public final class PdfReceiptGenerator {
     private PdfReceiptGenerator() {
     }
 
+    /* ────────── string literals ────────── */
+    private static final String QR_URL_BASE = "https://porezna.gov.hr/rn?";
+    private static final String JIR_PARAM = "jir=";
+    private static final String ZKI_PARAM = "zki=";
+    private static final String DATE_PARAM = "datv=";
+    private static final String AMOUNT_PARAM = "izn=";
+    private static final String RACUN_TITLE = "Racun";
+    private static final String BROJ_FAKTURE_LABEL = "Broj fakture: ";
+    private static final String DATUM_IZDAVANJA_LABEL = "Datum izdavanja racuna: ";
+    private static final String VRIJEME_IZDAVANJA_LABEL = "Vrijeme izdavanja racuna: ";
+    private static final String NACIN_PLACANJA_LABEL = "Nacin placanja: ";
+    private static final String HEADER_OPIS = "Opis";
+    private static final String HEADER_KOLICINA = "Kolicina";
+    private static final String HEADER_POREZ = "Porez";
+    private static final String HEADER_IZNOS_POREZA = "Iznos poreza";
+    private static final String HEADER_NETO_IZNOS = "Neto iznos";
+    private static final String UKUPAN_NETO_IZNOS_LABEL = "Ukupan neto iznos: ";
+    private static final String UKUPAN_PLACANJE_IZNOS_LABEL = "Ukupan iznos za placanje: ";
+    private static final String JIR_LABEL = "JIR: ";
+    private static final String ZKI_LABEL = "ZKI: ";
+    private static final String RACUN_IZDAO_LABEL = "Racun izdao: ";
+    private static final String FOOTER_LINE1 = "Izdao/la u ime dobavljaca ..., obrt za usluge, vl. ...";
+    private static final String FOOTER_LINE2 = "Second footer line.";
+    private static final String QR_IMG_NAME = "qr";
+    private static final String PNG_FORMAT = "png";
+    private static final String EUR_SUFFIX = " EUR";
+
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd.MM.yyyy");
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm:ss");
     private static final DateTimeFormatter QR_DATETIME_FMT = DateTimeFormatter.ofPattern("yyyyMMdd_HHmm");
 
+    /* ────────── layout ────────── */
     private static final float MARGIN = 50f;
     private static final float TITLE_GAP = 35f;
     private static final float BLOCK_GAP = 60f;
@@ -48,14 +75,30 @@ public final class PdfReceiptGenerator {
     private static final float TOTALS_BLOCK_GAP = 20f;
     private static final float ROW_HEIGHT = 18f;
     private static final float CELL_PADDING = 2f;
+    private static final float PAGE_TOP_MARGIN = 60f;
+    private static final float RIGHT_COLUMN_OFFSET = 10f;
+    private static final float HORIZONTAL_RULE_OFFSET = 4f;
+    private static final float AFTER_TABLE_GAP = 25f;
+
+    /* ────────── font sizes & line spacing ────────── */
+    private static final int TITLE_FONT_SIZE = 16;
+    private static final int DEFAULT_FONT_SIZE = 11;
+    private static final int LEGAL_FONT_SIZE = 10;
+    private static final float DEFAULT_LINE_SPACING = 14f;
+    private static final float TOTALS_LINE_SPACING = 16f;
+    private static final float LEGAL_NOTICE_FIRST_LINE_GAP = 16f;
+    private static final float LEGAL_NOTICE_LINE_GAP = 14f;
+
+    /* ────────── QR / footer ────────── */
     private static final int QR_SIZE = 110;
+    private static final float QR_Y = 120f;
+    private static final int QR_HINT_MARGIN = 1;
     private static final float FOOTER_LINE1_GAP = 18f;
     private static final float FOOTER_LINE2_GAP = 32f;
 
     private static final float[] TABLE_COL_WIDTHS = {140f, 60f, 70f, 100f, 100f};
 
-    public static void generatePdf(
-            OutputStream out,
+    public static byte[] generatePdf(
             List<String> supplierAddressLines,
             BrojRacunaType brojRacuna,
             LocalDateTime datumIVrijeme,
@@ -78,8 +121,8 @@ public final class PdfReceiptGenerator {
             var pageWidth = page.getMediaBox().getWidth();
             var tableWidth = pageWidth - 2 * MARGIN;
             var leftX = MARGIN;
-            var rightX = pageWidth / 2f + 10f;
-            var y = page.getMediaBox().getHeight() - 60f;
+            var rightX = pageWidth / 2f + RIGHT_COLUMN_OFFSET;
+            var y = page.getMediaBox().getHeight() - PAGE_TOP_MARGIN;
 
             try (var cs = new PDPageContentStream(doc, page, APPEND, true, true)) {
                 y = addTitle(cs, page, fontBold, y);
@@ -92,7 +135,11 @@ public final class PdfReceiptGenerator {
                 var qrData = buildQrData(jir, zki, datumIVrijeme, iznosUkupno);
                 addQrCodeAndFooter(cs, doc, page, font, qrData);
             }
-            doc.save(out);
+
+            try (var baos = new ByteArrayOutputStream()) {
+                doc.save(baos);
+                return baos.toByteArray();
+            }
         }
     }
 
@@ -101,16 +148,14 @@ public final class PdfReceiptGenerator {
                                       LocalDateTime dt,
                                       String totalAmount) {
 
-        var base = "https://porezna.gov.hr/rn?";
         var idParam = (jir != null && !jir.isBlank())
-                ? "jir=" + jir
-                : "zki=" + zki;
-//        var idParam = "zki=" + zki;
+                ? JIR_PARAM + jir
+                : ZKI_PARAM + zki;
 
-        var datePart = "datv=" + QR_DATETIME_FMT.format(dt);
-        var amountPart = "izn=" + formatAmountForQr(totalAmount);
+        var datePart = DATE_PARAM + QR_DATETIME_FMT.format(dt);
+        var amountPart = AMOUNT_PARAM + formatAmountForQr(totalAmount);
 
-        return base + idParam + "&" + datePart + "&" + amountPart;
+        return QR_URL_BASE + idParam + "&" + datePart + "&" + amountPart;
     }
 
     private static String formatAmountForQr(String amountTxt) {
@@ -118,7 +163,7 @@ public final class PdfReceiptGenerator {
     }
 
     private static float addTitle(PDPageContentStream cs, PDPage page, PDFont font, float y) throws IOException {
-        center(cs, page, font, 16, "Racun", y);
+        center(cs, page, font, TITLE_FONT_SIZE, RACUN_TITLE, y);
         return y - TITLE_GAP;
     }
 
@@ -128,10 +173,10 @@ public final class PdfReceiptGenerator {
                                           float x,
                                           float y) throws IOException {
         cs.beginText();
-        cs.setFont(font, 11);
+        cs.setFont(font, DEFAULT_FONT_SIZE);
         cs.newLineAtOffset(x, y);
         for (var i = 0; i < lines.size(); i++) {
-            if (i > 0) cs.newLineAtOffset(0, -14);
+            if (i > 0) cs.newLineAtOffset(0, -DEFAULT_LINE_SPACING);
             cs.showText(lines.get(i));
         }
         cs.endText();
@@ -147,17 +192,17 @@ public final class PdfReceiptGenerator {
                                       float y) throws IOException {
 
         var lines = List.of(
-                "Broj fakture:  " + br,
-                "Datum izdavanja racuna:  " + DATE_FMT.format(dt),
-                "Vrijeme izdavanja racuna:  " + TIME_FMT.format(dt),
-                "Nacin placanja:  " + np
+                BROJ_FAKTURE_LABEL + br,
+                DATUM_IZDAVANJA_LABEL + DATE_FMT.format(dt),
+                VRIJEME_IZDAVANJA_LABEL + TIME_FMT.format(dt),
+                NACIN_PLACANJA_LABEL + np
         );
 
         cs.beginText();
-        cs.setFont(font, 11);
+        cs.setFont(font, DEFAULT_FONT_SIZE);
         cs.newLineAtOffset(x, y);
         for (var i = 0; i < lines.size(); i++) {
-            if (i > 0) cs.newLineAtOffset(0, -14);
+            if (i > 0) cs.newLineAtOffset(0, -DEFAULT_LINE_SPACING);
             cs.showText(lines.get(i));
         }
         cs.endText();
@@ -173,7 +218,7 @@ public final class PdfReceiptGenerator {
                                        float tableW) throws IOException {
 
         drawTableRow(cs, bold, x, y,
-                new String[]{"Opis", "Kol.", "Porez", "Porez Iznos", "Neto iznos"});
+                new String[]{HEADER_OPIS, HEADER_KOLICINA, HEADER_POREZ, HEADER_IZNOS_POREZA, HEADER_NETO_IZNOS});
 
         var cursorY = y - ROW_HEIGHT;
         for (var it : items) {
@@ -187,11 +232,11 @@ public final class PdfReceiptGenerator {
             cursorY -= ROW_HEIGHT;
         }
 
-        cs.moveTo(x, cursorY + 4);
-        cs.lineTo(x + tableW, cursorY + 4);
+        cs.moveTo(x, cursorY + HORIZONTAL_RULE_OFFSET);
+        cs.lineTo(x + tableW, cursorY + HORIZONTAL_RULE_OFFSET);
         cs.stroke();
 
-        return cursorY - 25f;
+        return cursorY - AFTER_TABLE_GAP;
     }
 
     private static float addTotals(PDPageContentStream cs,
@@ -201,12 +246,13 @@ public final class PdfReceiptGenerator {
                                    float y) throws IOException {
 
         for (var line : List.of(
-                "Ukupan neto iznos    " + money(amount),
-                "Ukupan iznos za placanje    " + money(amount))) {
-
-            drawRightAlignedText(cs, bold, 11, rightX, y, line);
-            y -= 16;
+                UKUPAN_NETO_IZNOS_LABEL + money(amount),
+                UKUPAN_PLACANJE_IZNOS_LABEL + money(amount)
+        )) {
+            drawRightAlignedText(cs, bold, DEFAULT_FONT_SIZE, rightX, y, line);
+            y -= TOTALS_LINE_SPACING;
         }
+
         return y - TOTALS_BLOCK_GAP;
     }
 
@@ -220,15 +266,15 @@ public final class PdfReceiptGenerator {
                                         float y) throws IOException {
 
         cs.beginText();
-        cs.setFont(font, 10);
+        cs.setFont(font, LEGAL_FONT_SIZE);
         cs.newLineAtOffset(x, y);
         cs.showText(notice);
-        cs.newLineAtOffset(0, -16);
-        cs.showText("JIR: " + jir);
-        cs.newLineAtOffset(0, -14);
-        cs.showText("ZKI: " + zki);
-        cs.newLineAtOffset(0, -14);
-        cs.showText("Racun izdao: " + operator);
+        cs.newLineAtOffset(0, -LEGAL_NOTICE_FIRST_LINE_GAP);
+        cs.showText(JIR_LABEL + jir);
+        cs.newLineAtOffset(0, -LEGAL_NOTICE_LINE_GAP);
+        cs.showText(ZKI_LABEL + zki);
+        cs.newLineAtOffset(0, -LEGAL_NOTICE_LINE_GAP);
+        cs.showText(RACUN_IZDAO_LABEL + operator);
         cs.endText();
 
         return y;
@@ -241,19 +287,18 @@ public final class PdfReceiptGenerator {
                                            String qrData) throws IOException, WriterException {
 
         var qrImg = generateQrImage(qrData);
-        var img = createFromByteArray(doc, bufferedImageToBytes(qrImg), "qr");
+        var img = createFromByteArray(doc, bufferedImageToBytes(qrImg), QR_IMG_NAME);
         var qrX = (page.getMediaBox().getWidth() - QR_SIZE) / 2f;
-        var qrY = 120f;
 
-        cs.drawImage(img, qrX, qrY, QR_SIZE, QR_SIZE);
+        cs.drawImage(img, qrX, QR_Y, QR_SIZE, QR_SIZE);
 
-        center(cs, page, font, 10,
-                "Izdao/la u ime dobavljaca ..., obrt za usluge, vl. ...",
-                qrY - FOOTER_LINE1_GAP);
+        center(cs, page, font, LEGAL_FONT_SIZE,
+                FOOTER_LINE1,
+                QR_Y - FOOTER_LINE1_GAP);
 
-        center(cs, page, font, 10,
-                "Second footer line.",
-                qrY - FOOTER_LINE2_GAP);
+        center(cs, page, font, LEGAL_FONT_SIZE,
+                FOOTER_LINE2,
+                QR_Y - FOOTER_LINE2_GAP);
     }
 
     /* ────────── low-level drawing ────────── */
@@ -264,7 +309,7 @@ public final class PdfReceiptGenerator {
                                      float topY,
                                      String[] texts) throws IOException {
 
-        var textY = topY - (ROW_HEIGHT - 11) / 2f;
+        var textY = topY - (ROW_HEIGHT - DEFAULT_FONT_SIZE) / 2f;
         var cursorX = x;
 
         for (var i = 0; i < texts.length; i++) {
@@ -272,7 +317,7 @@ public final class PdfReceiptGenerator {
             var txt = texts[i];
 
             cs.beginText();
-            cs.setFont(font, 11);
+            cs.setFont(font, DEFAULT_FONT_SIZE);
             cs.newLineAtOffset(cursorX + CELL_PADDING, textY);
             cs.showText(txt);
             cs.endText();
@@ -315,7 +360,7 @@ public final class PdfReceiptGenerator {
     private static BufferedImage generateQrImage(String data) throws WriterException {
         var writer = new QRCodeWriter();
         var hints = Map.of(
-                EncodeHintType.MARGIN, 1,
+                EncodeHintType.MARGIN, QR_HINT_MARGIN,
                 ERROR_CORRECTION, Q
         );
         var matrix = writer.encode(data, QR_CODE, QR_SIZE, QR_SIZE, hints);
@@ -324,13 +369,13 @@ public final class PdfReceiptGenerator {
 
     private static byte[] bufferedImageToBytes(BufferedImage img) throws IOException {
         try (var baos = new ByteArrayOutputStream()) {
-            ImageIO.write(img, "png", baos);
+            ImageIO.write(img, PNG_FORMAT, baos);
             return baos.toByteArray();
         }
     }
 
     private static String money(String value) {
-        return value + " EUR";
+        return value + EUR_SUFFIX;
     }
 
     @Builder(toBuilder = true)
