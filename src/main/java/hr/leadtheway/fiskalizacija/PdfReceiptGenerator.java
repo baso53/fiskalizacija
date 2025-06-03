@@ -69,30 +69,30 @@ public final class PdfReceiptGenerator {
 
     /* ────────── layout ────────── */
     private static final float MARGIN = 50f;
-    private static final float TITLE_GAP = 35f;
-    private static final float BLOCK_GAP = 60f;
+    private static final float TITLE_GAP = 36f;
+    private static final float SUPPLIER_BLOCK_GAP = 60f;
     private static final float META_BLOCK_GAP = 80f;
     private static final float TOTALS_BLOCK_GAP = 20f;
-    private static final float ROW_HEIGHT = 18f;
-    private static final float CELL_PADDING = 2f;
+    private static final float TABLE_ROW_HEIGHT = 20f;
+    private static final float TABLE_CELL_PADDING = 2f;
     private static final float PAGE_TOP_MARGIN = 60f;
     private static final float RIGHT_COLUMN_OFFSET = 10f;
     private static final float HORIZONTAL_RULE_OFFSET = 4f;
-    private static final float AFTER_TABLE_GAP = 25f;
+    private static final float AFTER_TABLE_GAP = 26f;
 
     /* ────────── font sizes & line spacing ────────── */
     private static final int TITLE_FONT_SIZE = 16;
-    private static final int DEFAULT_FONT_SIZE = 11;
+    private static final int DEFAULT_FONT_SIZE = 12;
     private static final int LEGAL_FONT_SIZE = 10;
     private static final float DEFAULT_LINE_SPACING = 14f;
     private static final float TOTALS_LINE_SPACING = 16f;
-    private static final float LEGAL_NOTICE_FIRST_LINE_GAP = 16f;
+    private static final float LEGAL_NOTICE_FIRST_LINE_GAP = 24f;
     private static final float LEGAL_NOTICE_LINE_GAP = 14f;
 
     /* ────────── QR / footer ────────── */
-    private static final int QR_SIZE = 110;
+    private static final int QR_SIZE = 160;
     private static final float QR_Y = 120f;
-    private static final int QR_HINT_MARGIN = 1;
+    private static final int QR_HINT_MARGIN = 0;
     private static final float FOOTER_LINE1_GAP = 18f;
     private static final float FOOTER_LINE2_GAP = 32f;
 
@@ -180,7 +180,7 @@ public final class PdfReceiptGenerator {
             cs.showText(lines.get(i));
         }
         cs.endText();
-        return y - BLOCK_GAP;
+        return y - SUPPLIER_BLOCK_GAP;
     }
 
     private static float addMetaBlock(PDPageContentStream cs,
@@ -220,7 +220,7 @@ public final class PdfReceiptGenerator {
         drawTableRow(cs, bold, x, y,
                 new String[]{HEADER_OPIS, HEADER_KOLICINA, HEADER_POREZ, HEADER_IZNOS_POREZA, HEADER_NETO_IZNOS});
 
-        var cursorY = y - ROW_HEIGHT;
+        var cursorY = y - TABLE_ROW_HEIGHT;
         for (var it : items) {
             drawTableRow(cs, font, x, cursorY, new String[]{
                     it.description(),
@@ -229,7 +229,7 @@ public final class PdfReceiptGenerator {
                     "-",
                     money(it.netAmount())
             });
-            cursorY -= ROW_HEIGHT;
+            cursorY -= TABLE_ROW_HEIGHT;
         }
 
         cs.moveTo(x, cursorY + HORIZONTAL_RULE_OFFSET);
@@ -309,7 +309,7 @@ public final class PdfReceiptGenerator {
                                      float topY,
                                      String[] texts) throws IOException {
 
-        var textY = topY - (ROW_HEIGHT - DEFAULT_FONT_SIZE) / 2f;
+        var textY = topY - (TABLE_ROW_HEIGHT - DEFAULT_FONT_SIZE) / 2f;
         var cursorX = x;
 
         for (var i = 0; i < texts.length; i++) {
@@ -318,7 +318,7 @@ public final class PdfReceiptGenerator {
 
             cs.beginText();
             cs.setFont(font, DEFAULT_FONT_SIZE);
-            cs.newLineAtOffset(cursorX + CELL_PADDING, textY);
+            cs.newLineAtOffset(cursorX + TABLE_CELL_PADDING, textY);
             cs.showText(txt);
             cs.endText();
 
