@@ -1,8 +1,13 @@
-spring.application.name: fiskalizacija
-
 logging.level.root: TRACE
 
-fina.keystore.path: 'classpath:'
-fina.keystore.storepass:
-fina.keystore.alias: 'fiskal 1'
-fina.keystore.keypass:
+fina:
+  keystore:
+    path: 'classpath:${secrets.keystore.filename}'
+    storepass: '${secrets.keystore.pass}'
+    alias: '${secrets.keystore.alias}'
+    keypass: '${secrets.keystore.pass}'
+
+spring:
+  application.name: fiskalizacija
+  profiles:
+    active: secrets
