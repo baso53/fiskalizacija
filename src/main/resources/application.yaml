@@ -11,3 +11,8 @@ spring:
   application.name: fiskalizacija
   profiles:
     active: secrets
+
+pdf:
+  fonts:
+    regular: 'classpath:DejaVuSans.ttf'
+    bold: 'classpath:DejaVuSans-Bold.ttf'

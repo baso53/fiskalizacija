@@ -40,6 +40,7 @@ tasks.register('wsimport') {
                     verbose: true,
                     wsdl: "${projectDir}/src/main/resources/Fiskalizacija-WSDL-EDUC_v1.7/wsdl/FiskalizacijaService.wsdl",
                     xnocompile: true,
+                    encoding: "UTF-8",
                     package: "hr.leadtheway.wsdl") {
                 // config for https://github.com/fillumina/krasa-jaxb-tools
                 xjcarg(value: '-XJsr303Annotations')

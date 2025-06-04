@@ -10,7 +10,10 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.font.PDFont;
-import org.apache.pdfbox.pdmodel.font.PDType1Font;
+import org.apache.pdfbox.pdmodel.font.PDType0Font;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
+import org.springframework.stereotype.Service;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -27,13 +30,20 @@ import static com.google.zxing.client.j2se.MatrixToImageWriter.toBufferedImage;
 import static com.google.zxing.qrcode.decoder.ErrorCorrectionLevel.Q;
 import static org.apache.pdfbox.pdmodel.PDPageContentStream.AppendMode.APPEND;
 import static org.apache.pdfbox.pdmodel.common.PDRectangle.A4;
-import static org.apache.pdfbox.pdmodel.font.Standard14Fonts.FontName.HELVETICA;
-import static org.apache.pdfbox.pdmodel.font.Standard14Fonts.FontName.HELVETICA_BOLD;
 import static org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject.createFromByteArray;
 
+@Service
 public final class PdfReceiptGenerator {
 
-    private PdfReceiptGenerator() {
+    private final Resource regularFontFile;
+    private final Resource boldFontFile;
+
+    public PdfReceiptGenerator(
+            @Value("${pdf.fonts.regular}") Resource regularFontFile,
+            @Value("${pdf.fonts.bold}") Resource boldFontFile
+    ) {
+        this.regularFontFile = regularFontFile;
+        this.boldFontFile = boldFontFile;
     }
 
     /* ────────── string literals ────────── */
@@ -42,22 +52,22 @@ public final class PdfReceiptGenerator {
     private static final String ZKI_PARAM = "zki=";
     private static final String DATE_PARAM = "datv=";
     private static final String AMOUNT_PARAM = "izn=";
-    private static final String RACUN_TITLE = "Racun";
+    private static final String RACUN_TITLE = "Račun";
     private static final String BROJ_FAKTURE_LABEL = "Broj fakture: ";
-    private static final String DATUM_IZDAVANJA_LABEL = "Datum izdavanja racuna: ";
-    private static final String VRIJEME_IZDAVANJA_LABEL = "Vrijeme izdavanja racuna: ";
-    private static final String NACIN_PLACANJA_LABEL = "Nacin placanja: ";
+    private static final String DATUM_IZDAVANJA_LABEL = "Datum izdavanja računa: ";
+    private static final String VRIJEME_IZDAVANJA_LABEL = "Vrijeme izdavanja računa: ";
+    private static final String NACIN_PLACANJA_LABEL = "Način plaćanja: ";
     private static final String HEADER_OPIS = "Opis";
-    private static final String HEADER_KOLICINA = "Kolicina";
+    private static final String HEADER_KOLICINA = "Količina";
     private static final String HEADER_POREZ = "Porez";
     private static final String HEADER_IZNOS_POREZA = "Iznos poreza";
     private static final String HEADER_NETO_IZNOS = "Neto iznos";
     private static final String UKUPAN_NETO_IZNOS_LABEL = "Ukupan neto iznos: ";
-    private static final String UKUPAN_PLACANJE_IZNOS_LABEL = "Ukupan iznos za placanje: ";
+    private static final String UKUPAN_PLACANJE_IZNOS_LABEL = "Ukupan iznos za plaćanje: ";
     private static final String JIR_LABEL = "JIR: ";
     private static final String ZKI_LABEL = "ZKI: ";
-    private static final String RACUN_IZDAO_LABEL = "Racun izdao: ";
-    private static final String FOOTER_LINE1 = "Izdao/la u ime dobavljaca ..., obrt za usluge, vl. ...";
+    private static final String RACUN_IZDAO_LABEL = "Račun izdao: ";
+    private static final String FOOTER_LINE1 = "Izdao/la u ime dobavljača ..., obrt za usluge, vl. ...";
     private static final String FOOTER_LINE2 = "Second footer line.";
     private static final String QR_IMG_NAME = "qr";
     private static final String PNG_FORMAT = "png";
@@ -82,7 +92,7 @@ public final class PdfReceiptGenerator {
 
     /* ────────── font sizes & line spacing ────────── */
     private static final int TITLE_FONT_SIZE = 16;
-    private static final int DEFAULT_FONT_SIZE = 12;
+    private static final int DEFAULT_FONT_SIZE = 11;
     private static final int LEGAL_FONT_SIZE = 10;
     private static final float DEFAULT_LINE_SPACING = 14f;
     private static final float TOTALS_LINE_SPACING = 16f;
@@ -98,7 +108,7 @@ public final class PdfReceiptGenerator {
 
     private static final float[] TABLE_COL_WIDTHS = {140f, 60f, 70f, 100f, 100f};
 
-    public static byte[] generatePdf(
+    public byte[] generatePdf(
             List<String> supplierAddressLines,
             BrojRacunaType brojRacuna,
             LocalDateTime datumIVrijeme,
@@ -115,8 +125,8 @@ public final class PdfReceiptGenerator {
             var page = new PDPage(A4);
             doc.addPage(page);
 
-            var font = new PDType1Font(HELVETICA);
-            var fontBold = new PDType1Font(HELVETICA_BOLD);
+            var font = PDType0Font.load(doc, regularFontFile.getInputStream(), true);
+            var fontBold = PDType0Font.load(doc, boldFontFile.getInputStream(), true);
 
             var pageWidth = page.getMediaBox().getWidth();
             var tableWidth = pageWidth - 2 * MARGIN;
@@ -192,10 +202,10 @@ public final class PdfReceiptGenerator {
                                       float y) throws IOException {
 
         var lines = List.of(
-                BROJ_FAKTURE_LABEL + br,
+                BROJ_FAKTURE_LABEL + generateBrojFakture(br),
                 DATUM_IZDAVANJA_LABEL + DATE_FMT.format(dt),
                 VRIJEME_IZDAVANJA_LABEL + TIME_FMT.format(dt),
-                NACIN_PLACANJA_LABEL + np
+                NACIN_PLACANJA_LABEL + generateNacinPlacanja(np)
         );
 
         cs.beginText();
@@ -207,6 +217,20 @@ public final class PdfReceiptGenerator {
         }
         cs.endText();
         return y - META_BLOCK_GAP;
+    }
+
+    private static String generateBrojFakture(BrojRacunaType br) {
+        return br.getBrOznRac() + "/" + br.getOznPosPr() + "/" + br.getOznNapUr();
+    }
+
+    private static String generateNacinPlacanja(NacinPlacanjaType np) {
+        return switch (np) {
+            case G -> "Gotovina";
+            case K -> "Kartica";
+            case C -> "Ček";
+            case T -> "Transakcijski račun";
+            case O -> "Ostalo";
+        };
     }
 
     private static float addItemsTable(PDPageContentStream cs,
